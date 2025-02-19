@@ -8,7 +8,8 @@ final modelProvider = StateNotifierProvider.autoDispose
 });
 
 class ModelNotifier extends StateNotifier<Model> {
-  ModelNotifier() : super(Model(modelPath: "assets/models/first_model.glb"));
+  ModelNotifier()
+      : super(Model(modelPath: "assets/models/retarget_first_male_walk2.glb"));
 
   // Load model from file path
   void loadModel(String path) {
