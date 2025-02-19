@@ -3,13 +3,17 @@ import 'package:three_d_avatar_you/models/three_d_obj_model.dart';
 
 // Provider to manage two 3D models
 final modelProvider = StateNotifierProvider.autoDispose
-    .family<ModelNotifier, Model, int>((ref, id) {
-  return ModelNotifier();
+    .family<ModelNotifier, Model, int>((ref, modelId) {
+  // Define initial model paths based on modelId
+  final initialModelPath = modelId == 0
+      ? "assets/models/first_model_retargeted.glb"
+      : "assets/models/second_model_retargeted.glb";
+  return ModelNotifier(initialModelPath: initialModelPath);
 });
 
 class ModelNotifier extends StateNotifier<Model> {
-  ModelNotifier()
-      : super(Model(modelPath: "assets/models/retarget_first_male_walk2.glb"));
+  ModelNotifier({required String initialModelPath})
+      : super(Model(modelPath: initialModelPath));
 
   // Load model from file path
   void loadModel(String path) {

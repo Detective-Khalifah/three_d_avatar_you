@@ -1,16 +1,18 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:three_d_avatar_you/providers/model_provider.dart';
+// import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class ModelControls extends ConsumerStatefulWidget {
+/// Rotation/Jump Controls
+class ModelControls extends StatefulWidget {
   const ModelControls({super.key});
 
   @override
-  ConsumerState<ConsumerStatefulWidget> createState() => _ModelControlsState();
+  State<ModelControls> createState() => _ModelControlsState();
 }
 
-class _ModelControlsState extends ConsumerState<ModelControls> {
+class _ModelControlsState extends State<ModelControls> {
+  bool isRightFABExpanded = false, isLeftFABExpanded = false;
+
   Future<void> _pickModel(BuildContext context, int modelId) async {
     try {
       final result = await FilePicker.platform.pickFiles(
@@ -21,7 +23,7 @@ class _ModelControlsState extends ConsumerState<ModelControls> {
       );
       if (result != null) {
         final path = result.files.single.path!;
-        ref.read(modelProvider(modelId).notifier).loadModel(path);
+        // ref.read(modelProvider(modelId).notifier).loadModel(path);
       }
     } catch (e) {
       debugPrint("File picker error: $e");
@@ -30,52 +32,125 @@ class _ModelControlsState extends ConsumerState<ModelControls> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return Stack(
       children: [
-        // ExpansionTile(title: Text("Model Controls")),
-        // Controls
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        Positioned(
+          bottom: 16,
+          left: 16,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            spacing: 8,
             children: [
-              ElevatedButton(
-                onPressed: () => _pickModel(context, 0),
-                child: const Text('Load Model 1'),
+              AnimatedSlide(
+                duration: const Duration(milliseconds: 150),
+                offset: isLeftFABExpanded ? Offset.zero : const Offset(0, 1),
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 150),
+                  opacity: isLeftFABExpanded ? 1.0 : 0.0,
+                  child: FloatingActionButton.extended(
+                    onPressed: () {},
+                    label: Text("Turn Left"),
+                    icon: Icon(Icons.arrow_left),
+                  ),
+                ),
               ),
-              ElevatedButton(
-                onPressed: () => _pickModel(context, 1),
-                child: const Text('Load Model 2'),
+              AnimatedSlide(
+                duration: const Duration(milliseconds: 150),
+                offset: isLeftFABExpanded ? Offset.zero : const Offset(0, 1),
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 150),
+                  opacity: isLeftFABExpanded ? 1.0 : 0.0,
+                  child: FloatingActionButton.extended(
+                    onPressed: () {},
+                    label: Text("Turn Right"),
+                    icon: Icon(Icons.arrow_right),
+                  ),
+                ),
+              ),
+              AnimatedSlide(
+                duration: const Duration(milliseconds: 150),
+                offset: isLeftFABExpanded ? Offset.zero : const Offset(0, 1),
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 150),
+                  opacity: isLeftFABExpanded ? 1.0 : 0.0,
+                  child: FloatingActionButton.extended(
+                    onPressed: () {},
+                    label: Text("Jump"),
+                    icon: Icon(Icons.arrow_upward),
+                  ),
+                ),
+              ),
+              FloatingActionButton.extended(
+                onPressed: () {
+                  setState(() {
+                    isLeftFABExpanded = !isLeftFABExpanded;
+                  });
+                },
+                label: Text("Model 1"),
+                icon: Icon(Icons.face),
               ),
             ],
           ),
         ),
-        // Rotation/Jump Controls
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        Positioned(
+          bottom: 16,
+          right: 16,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            spacing: 8,
             children: [
-              ElevatedButton.icon(
-                onPressed: () =>
-                    ref.read(modelProvider(0).notifier).rotate(-0.2),
-                label: const Text('← Rotate Left'),
-                icon: Icon(Icons.arrow_left),
+              AnimatedSlide(
+                duration: const Duration(milliseconds: 150),
+                offset: isRightFABExpanded ? Offset.zero : const Offset(0, 1),
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 150),
+                  opacity: isRightFABExpanded ? 1.0 : 0.0,
+                  child: FloatingActionButton.extended(
+                    onPressed: () {},
+                    label: Text("Turn Left"),
+                    icon: Icon(Icons.arrow_left),
+                  ),
+                ),
               ),
-              ElevatedButton.icon(
-                onPressed: () => ref.read(modelProvider(0).notifier).jump(),
-                label: const Text('Jump'),
-                icon: Icon(Icons.arrow_upward),
+              AnimatedSlide(
+                duration: const Duration(milliseconds: 150),
+                offset: isRightFABExpanded ? Offset.zero : const Offset(0, 1),
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 150),
+                  opacity: isRightFABExpanded ? 1.0 : 0.0,
+                  child: FloatingActionButton.extended(
+                    onPressed: () {},
+                    label: Text("Turn Right"),
+                    icon: Icon(Icons.arrow_right),
+                  ),
+                ),
               ),
-              ElevatedButton.icon(
-                onPressed: () =>
-                    ref.read(modelProvider(0).notifier).rotate(0.2),
-                label: const Text('Rotate Right'),
-                icon: Icon(Icons.arrow_right),
+              AnimatedSlide(
+                duration: const Duration(milliseconds: 150),
+                offset: isRightFABExpanded ? Offset.zero : const Offset(0, 1),
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 150),
+                  opacity: isRightFABExpanded ? 1.0 : 0.0,
+                  child: FloatingActionButton.extended(
+                    onPressed: () {},
+                    label: Text("Jump"),
+                    icon: Icon(Icons.arrow_upward),
+                  ),
+                ),
+              ),
+              FloatingActionButton.extended(
+                onPressed: () {
+                  setState(() {
+                    isRightFABExpanded = !isRightFABExpanded;
+                  });
+                },
+                label: Text("Model 2"),
+                icon: Icon(Icons.android),
               ),
             ],
           ),
-        )
+        ),
       ],
     );
   }

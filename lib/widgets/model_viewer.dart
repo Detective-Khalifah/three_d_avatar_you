@@ -42,11 +42,14 @@ class _ModelViewerState extends ConsumerState<ModelViewer> {
       ),
       child: modelState.modelPath != null
           ? Flutter3DViewer(
-              enableTouch: false,
+              // If 'true' is passsed, the flutter_3d_controller will add gesture interceptor layer
+              // to prevent gesture recognizers from malfunctioning on iOS and some Android devices.
+              // the default value is true
+              activeGestureInterceptor: true,
+              // Disable viewer touch response by setting 'enableTouch' to 'false'
+              enableTouch: true,
               controller: _controller,
               src: modelState.modelPath!,
-              // src: "assets/models/67b371d547fa86b2d94ed8ad.glb",
-              // src: "assets/models/first_model.glb",
               onError: (error) {
                 debugPrint("`ModelViewer`: Error loading model");
               },
@@ -61,7 +64,7 @@ class _ModelViewerState extends ConsumerState<ModelViewer> {
                 debugPrint("Model rotation: ${modelState.rotationY}");
                 // modelNotifier.rotate(-10);
 
-                _controller.playAnimation();
+                // _controller.playAnimation();
                 if (modelState.isJumping) {
                   _controller.playAnimation(animationName: "jump");
                 } else {
