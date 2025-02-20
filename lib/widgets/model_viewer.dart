@@ -4,19 +4,28 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:three_d_avatar_you/providers/model_provider.dart';
 
 class ModelViewer extends ConsumerStatefulWidget {
+  final Function(Flutter3DController)? onControllerCreated;
   final int modelId;
-  const ModelViewer({required this.modelId, Key? key}) : super(key: key);
+
+  const ModelViewer({
+    required this.onControllerCreated,
+    required this.modelId,
+    Key? key,
+  }) : super(key: key);
 
   @override
   ConsumerState<ModelViewer> createState() => _ModelViewerState();
 }
 
 class _ModelViewerState extends ConsumerState<ModelViewer> {
-  final _controller = Flutter3DController();
+  late final _controller; // = Flutter3DController();
 
   @override
   void initState() {
     super.initState();
+    _controller = Flutter3DController();
+    // Notify the parent widget that the controller is created
+    widget.onControllerCreated?.call(_controller);
   }
 
   @override
@@ -37,9 +46,9 @@ class _ModelViewerState extends ConsumerState<ModelViewer> {
       height: MediaQuery.of(context).size.width * 0.9,
       // width: MediaQuery.of(context).size.width * 0.5,
       width: double.maxFinite,
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey),
-      ),
+      // decoration: BoxDecoration(
+      //   border: Border.symmetric(horizontal: Colors.grey),
+      // ),
       child: modelState.modelPath != null
           ? Flutter3DViewer(
               // If 'true' is passsed, the flutter_3d_controller will add gesture interceptor layer
@@ -57,20 +66,21 @@ class _ModelViewerState extends ConsumerState<ModelViewer> {
                 debugPrint(
                     "`Model with address $modelAddress succesfully loaded.");
                 debugPrint("Model rotation: ${modelState.rotationY}");
-                modelNotifier.rotate(10);
+                // modelNotifier.rotate(10);
                 final anims = await _controller.getAvailableAnimations();
 
-                debugPrint("Available animations: $anims");
+                debugPrint(
+                    "Available animations for ${widget.modelId}: $anims");
                 debugPrint("Model rotation: ${modelState.rotationY}");
-                // modelNotifier.rotate(-10);
+                modelNotifier.rotate(-10);
 
                 // _controller.playAnimation();
-                if (modelState.isJumping) {
-                  _controller.playAnimation(animationName: "jump");
-                } else {
-                  _controller.playAnimation(animationName: "jump");
-                  // _controller.playAnimation(animationName: "idle");
-                }
+                // if (modelState.isJumping) {
+                //   _controller.playAnimation(animationName: "jump");
+                // } else {
+                //   _controller.playAnimation(animationName: "jump");
+                //   // _controller.playAnimation(animationName: "idle");
+                // }
               },
               onProgress: (progressValue) =>
                   debugPrint("`ModelViewer`: Loading model -- $progressValue"),
