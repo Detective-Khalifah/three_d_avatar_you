@@ -1,70 +1,10 @@
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:three_d_avatar_you/widgets/extended_fab.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:three_d_avatar_you/providers/model_provider.dart';
 
-class ModelControls extends ConsumerStatefulWidget {
-  const ModelControls({super.key});
-
-  @override
-  ConsumerState<ConsumerStatefulWidget> createState() => _ModelControlsState();
-}
-
-class _ModelControlsState extends ConsumerState<ModelControls> {
-  Future<void> _pickModel(BuildContext context, int modelId) async {
-    try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['glb'],
-        // type: FileType.any,
-        // allowedExtensions: ['glb'],
-      );
-      if (result != null) {
-        final path = result.files.single.path!;
-        ref.read(modelProvider(modelId).notifier).loadModel(path);
-      }
-    } catch (e) {
-      debugPrint("File picker error: $e");
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        // ExpansionTile(title: Text("Model Controls")),
-        // Controls
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              IconButton(
-                onPressed: () {
-                  // _controller.setCameraOrbit(20, 20, 5);
-                  //controller.setCameraTarget(0.3, 0.2, 0.4);
-                },
-                icon: const Icon(Icons.camera_alt_outlined),
-              ),
-              IconButton(
-                onPressed: () {
-                  // _controller.resetCameraOrbit();
-                  //controller.resetCameraTarget();
-                },
-                icon: const Icon(Icons.cameraswitch_outlined),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 /// Rotation/Jump Controls
-class ControlFABs extends StatefulWidget {
+class ControlFABs extends ConsumerStatefulWidget {
   final WebViewController? controller0;
   final WebViewController? controller1;
 
@@ -75,35 +15,37 @@ class ControlFABs extends StatefulWidget {
   });
 
   @override
-  State<ControlFABs> createState() => _ControlFABsState();
+  ConsumerState<ControlFABs> createState() => _ControlFABsState();
 }
 
-class _ControlFABsState extends State<ControlFABs> {
+class _ControlFABsState extends ConsumerState<ControlFABs> {
   bool _isTalking = true; // Track which model is talking
-  bool isRightFABExpanded = false, isLeftFABExpanded = false;
+  bool isRightFABExpanded = false,
+      isLeftFABExpanded = false,
+      isMixamoModel = false;
 
   // Injects JavaScript to start animations
   /// Model stops previous animation, becomes idle or talks if they're facing the other model.
   /// animations:  Standing_Idle_003, Walk_Jump_002, Talking_001, and Talking_010
-  void _playAnimation(WebViewController controller, String animation) {
+  void _playAnimation(WebViewController controller, String animation,
+      {String? statement}) {
     if (widget.controller0 == null || widget.controller1 == null) return;
+    String theAnimation = parseAnimationStatement(
+      animation: animation,
+      controller: controller,
+    );
 
-    final theAnimation = switch (animation) {
-      "idle" => "Standing_Idle_003",
-      "jump" =>
-        (controller == widget.controller0) ? "Walk_Jump_002" : "Walk_Jump_001",
-      "talk" =>
-        (controller == widget.controller0) ? "Talking_010" : "Talking_001",
-      _ => throw Exception("Unexpected animation value: $animation")
-    };
+    if (statement != null && statement.isNotEmpty) {
+      if (!isMixamoModel) controller.runJavaScript(statement);
+    }
 
     final repetitions = animation == "jump" ? 1 : "Infinity";
 
     controller.runJavaScript('''
-      // let modelViewer;
-      if (typeof modelViewer === "undefined" /*modelViewer == null*/) {
+      // Ensure modelViewer is defined
+      if (typeof modelViewer === "undefined") {
         modelViewer = document.querySelector("model-viewer");
-      }
+    }
 
       console.log(modelViewer.getCameraTarget().toString());
       console.log(modelViewer.getCameraOrbit().toString());
@@ -115,19 +57,61 @@ class _ControlFABsState extends State<ControlFABs> {
 
       // Select the passed animation and play it
       modelViewer.animationName = "$theAnimation";
-      if ("$animation" == "jump") {
-        modelViewer.play({repetitions: $repetitions});
-          console.log("Playing jump animation with 1 repetition.");
-      } else {
-        modelViewer.play();
-          console.log("Playing animation with default repetitions.");
+      modelViewer.play({repetitions: $repetitions});
+      console.log("Playing jump animation with '$repetitions' repetition.");
+      
+      if (typeof duration === "undefined") {
+        let duration = modelViewer.duration;
+        console.log("Animation duration: ", duration);
       }
-      // modelViewer.play({repetitions: $repetitions});
+
       setTimeout(() => {
-    // modelViewer.cameraTarget = "auto"; // Re-center camera
-    // modelViewer.cameraOrbit = "auto";  // Ensure camera follows
-  }, 500);
+        if ("$theAnimation" !== "crouch") {
+        console.log("not crouch);
+          modelViewer.pause();
+          modelViewer.currentTime = 0;
+        } else {
+        console.log("crouch");
+          modelViewer.pause();
+          modelViewer.play("stand_up");
+        }
+        // modelViewer.cameraTarget = "auto"; // Re-center camera
+        // modelViewer.cameraOrbit = "auto";  // Ensure camera follows
+      }, duration);
     ''');
+  }
+
+  String parseAnimationStatement({
+    required String animation,
+    required WebViewController controller,
+  }) {
+    final String theAnimation;
+
+    if (isMixamoModel) {
+      theAnimation = switch (animation) {
+        "crouch" => "crouch",
+        "idle" =>
+          (controller == widget.controller0) ? "turn_right" : "turn_left",
+        // (controller == widget.controller0) ? "turn_left" : "turn_right",
+        "jump" => "jump_up",
+        "stand" => "stand_up",
+        "talk" =>
+          (controller == widget.controller0) ? "turn_left" : "turn_right",
+        // (controller == widget.controller0) ? "turn_right" : "turn_left",
+        _ => "jump_up"
+      };
+    } else {
+      theAnimation = switch (animation) {
+        "idle" => "Standing_Idle_003",
+        "jump" => (controller == widget.controller0)
+            ? "Walk_Jump_002"
+            : "Walk_Jump_001",
+        "talk" =>
+          (controller == widget.controller0) ? "Talking_010" : "Talking_001",
+        _ => "Standing_Idle_003"
+      };
+    }
+    return theAnimation;
   }
 
   /// Switches animation & resumes talking after interaction
@@ -162,138 +146,167 @@ class _ControlFABsState extends State<ControlFABs> {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Positioned(
-          bottom: 16,
-          left: 16,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return SafeArea(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
             spacing: 8,
             children: [
-              ExtendedFab(
-                isExpanded: isLeftFABExpanded,
+              IconButton(
                 onPressed: () {
-                  // Rotate Model 1 left
-                  // widget.controller0?.setCameraTarget(-.1, 45.0, 5.0);
-                  widget.controller0?.runJavaScript(
-                      '''document.querySelector("model-viewer").cameraOrbit = ("90deg 90deg 5m");''');
-                  widget.controller0?.runJavaScript(
-                      '''document.querySelector("model-viewer").cameraTarget = ("4.5m 1.5m 0m");''');
-                  _playAnimation(widget.controller0!, "idle");
-                },
-                label: "Turn Left",
-                icon: Icons.swipe_left,
-              ),
-              ExtendedFab(
-                isExpanded: isLeftFABExpanded,
-                onPressed: () {
-                  // Rotate Model 1 right, then make 'im start talking
-                  widget.controller0?.runJavaScript(
-                      '''document.querySelector("model-viewer").cameraOrbit = "-90deg 120deg 1.5m";''');
-                  widget.controller0?.runJavaScript(
-                      '''document.querySelector("model-viewer").cameraTarget = ("-3m -1m 0m");''');
-                  //     widget.controller0?.runJavaScript(
-                  //     '''document.querySelector("model-viewer").cameraOrbit = "-90deg 90deg 1m";''');
-                  // widget.controller0?.runJavaScript(
-                  //     '''document.querySelector("model-viewer").cameraTarget = ("-4.5m 1.6m 0m");''');
-                  _playAnimation(widget.controller0!, "talk");
-                  // widget.controller0?.setCameraOrbit(.1, 45.0, 5.0);
-                },
-                label: "Turn Right",
-                icon: Icons.swipe_right,
-              ),
-              ExtendedFab(
-                isExpanded: isLeftFABExpanded,
-                onPressed: () async {
                   // Jump animation for Model 1
-                  widget.controller0?.runJavaScript(
-                      '''document.querySelector("model-viewer").cameraOrbit = "-90deg 90deg 1m";''');
-                  widget.controller0?.runJavaScript(
-                      '''document.querySelector("model-viewer").cameraTarget = ("-4.5m 1.6m 1m");''');
-                  _playAnimation(widget.controller0!, "jump");
+                  _playAnimation(widget.controller0!, "jump", statement: '''
+                    document.querySelector("model-viewer").cameraOrbit = "-90deg 90deg 1m";
+                    document.querySelector("model-viewer").cameraTarget = ("-4.5m 1.6m 1m");
+                  ''');
                   // widget.controller0?.resetCameraOrbit();
                   // widget.controller0?.resetCameraTarget();
                   // widget.controller0?.stopAnimation();
                 },
-                label: "Jump",
-                icon: Icons.swipe_up,
+                icon: Icon(Icons.swipe_up),
               ),
-              FloatingActionButton.extended(
-                onPressed: () {
-                  setState(() {
-                    isLeftFABExpanded = !isLeftFABExpanded;
-                  });
-                },
-                label: Text("Model 1"),
-                icon: Icon(Icons.person_4_outlined),
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: () {
+                      // Rotate Model 1 left
+                      // widget.controller0?.setCameraTarget(-.1, 45.0, 5.0);
+                      _playAnimation(widget.controller0!, "idle", statement: '''
+                            document.querySelector("model-viewer").cameraOrbit = ("90deg 90deg 5m");
+                            document.querySelector("model-viewer").cameraTarget = ("4.5m 1.5m 0m");
+                          ''');
+                    },
+                    icon: Icon(Icons.swipe_left),
+                  ),
+                  IconButton(
+                    onPressed: () {
+                      // Crouch animation for Model 1
+                      _playAnimation(
+                        widget.controller0!,
+                        isMixamoModel ? "crouch" : "idle",
+                        statement:
+                            '''document.querySelector("model-viewer").cameraOrbit = "-90deg 90deg 1m";
+                            document.querySelector("model-viewer").cameraTarget = ("-4.5m 1.6m 1m");''',
+                      );
+                    },
+                    icon: Icon(Icons.swipe_down),
+                  ),
+                  IconButton(
+                    onPressed: () {
+                      // Rotate Model 1 right, then make 'im start talking
+                      //     widget.controller0?.runJavaScript(
+                      //     '''document.querySelector("model-viewer").cameraOrbit = "-90deg 90deg 1m";''');
+                      // widget.controller0?.runJavaScript(
+                      //     '''document.querySelector("model-viewer").cameraTarget = ("-4.5m 1.6m 0m");''');
+                      _playAnimation(widget.controller0!, "talk",
+                          statement:
+                              'document.querySelector("model-viewer").cameraOrbit = "-90deg 120deg 1.5m";' +
+                                  'document.querySelector("model-viewer").cameraTarget = ("-3m -1m 0m");');
+                      // widget.controller0?.setCameraOrbit(.1, 45.0, 5.0);
+                    },
+                    icon: Icon(Icons.swipe_right),
+                  ),
+                ],
               ),
             ],
           ),
-        ),
-        Positioned(
-          bottom: 16,
-          right: 16,
-          child: Column(
+          TextButton.icon(
+            onPressed: () {
+              late final model0State = ref.read(modelProvider(0).notifier);
+              late final model1State = ref.watch(modelProvider(1).notifier);
+              debugPrint("Switching... Is Mixamo? $isMixamoModel");
+              // if (isMixamoModel) {
+              //   setState(() {
+              //     model0State
+              //         .loadModel("assets/models/first_model_retargeted.glb");
+              //     model1State
+              //         .loadModel("assets/models/second_model_retargeted.glb");
+              //   });
+              //   // isMixamoModel = false;
+              // } else {
+              //   setState(() {
+              //     model0State
+              //         .loadModel("assets/models/first_model_mixamoed.glb");
+              //     model1State
+              //         .loadModel("assets/models/second_model_mixamoed.glb");
+              //   });
+              // }
+              // isMixamoModel = !isMixamoModel;
+              if (isMixamoModel) {
+                model0State
+                    .loadModel("assets/models/first_model_retargeted.glb");
+                model1State
+                    .loadModel("assets/models/second_model_retargeted.glb");
+              } else {
+                model1State.loadModel("assets/models/first_model_mixamoed.glb");
+                model0State
+                    .loadModel("assets/models/second_model_mixamoed.glb");
+              }
+              setState(() {
+                isMixamoModel = !isMixamoModel;
+              });
+              debugPrint("Switched. Is Mixamo? $isMixamoModel");
+            },
+            label: Text("Switch model"),
+          ),
+          Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.end,
+            crossAxisAlignment: CrossAxisAlignment.center,
             spacing: 8,
             children: [
-              ExtendedFab(
-                isExpanded: isRightFABExpanded,
-                onPressed: () {
-                  // Rotate Model 2 left
-                  widget.controller1?.runJavaScript(
-                      '''document.querySelector("model-viewer").cameraOrbit = ("90deg 90deg 3m");''');
-                  // widget.controller1?.runJavaScript(
-                  //     '''document.querySelector("model-viewer").cameraTarget = ("4.5m 1.5m 0m");''');
-                  widget.controller1?.runJavaScript(
-                      '''document.querySelector("model-viewer").cameraTarget = ("4m 1.5m 0m");''');
-                  _playAnimation(widget.controller1!, "talk");
-                  // widget.controller1?.setCameraOrbit(-.1, 45.0, 2.0);
-                },
-                label: "Turn Left",
-                icon: Icons.swipe_left,
-              ),
-              ExtendedFab(
-                isExpanded: isRightFABExpanded,
-                onPressed: () {
-                  // Rotate Model 2 right
-                  widget.controller1?.runJavaScript(
-                      '''document.querySelector("model-viewer").cameraOrbit = "-90deg 90deg 1m";''');
-                  widget.controller1?.runJavaScript(
-                      '''document.querySelector("model-viewer").cameraTarget = ("-4.5m 1.4m 0m");''');
-                  _playAnimation(widget.controller1!, "idle");
-                  // widget.controller1?.setCameraOrbit(10.0, 45.0, 2.0);
-                },
-                label: "Turn Right",
-                icon: Icons.swipe_right,
-              ),
-              ExtendedFab(
-                isExpanded: isRightFABExpanded,
+              IconButton(
                 onPressed: () async {
-                  widget.controller1?.runJavaScript(
-                      '''document.querySelector("model-viewer").cameraOrbit = "-90deg 90deg 1m";''');
-                  widget.controller1?.runJavaScript(
-                      '''document.querySelector("model-viewer").cameraTarget = ("-4.5m 1.6m 1m");''');
-                  _playAnimation(widget.controller1!, "jump");
+                  _playAnimation(widget.controller1!, "jump",
+                      statement:
+                          'document.querySelector("model-viewer").cameraOrbit = "-90deg 90deg 1m";' +
+                              'document.querySelector("model-viewer").cameraTarget = ("-4.5m 1.6m 1m");');
                 },
-                label: "Jump",
-                icon: Icons.swipe_up,
+                icon: Icon(Icons.swipe_up),
               ),
-              FloatingActionButton.extended(
-                onPressed: () {
-                  setState(() {
-                    isRightFABExpanded = !isRightFABExpanded;
-                  });
-                },
-                label: Text("Model 2"),
-                icon: Icon(Icons.person_outline),
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: () {
+                      // Rotate Model 2 left
+                      // widget.controller1?.runJavaScript(
+                      //     '''document.querySelector("model-viewer").cameraTarget = ("4.5m 1.5m 0m");''');
+                      _playAnimation(widget.controller1!, "talk",
+                          statement:
+                              'document.querySelector("model-viewer").cameraOrbit = ("90deg 90deg 3m");' +
+                                  'document.querySelector("model-viewer").cameraTarget = ("4m 1.5m 0m");');
+                      // widget.controller1?.setCameraOrbit(-.1, 45.0, 2.0);
+                    },
+                    icon: Icon(Icons.swipe_left),
+                  ),
+                  IconButton(
+                    onPressed: () async {
+                      _playAnimation(widget.controller1!,
+                          isMixamoModel ? "crouch" : "idle",
+                          statement:
+                              'document.querySelector("model-viewer").cameraOrbit = "-90deg 90deg 1m";' +
+                                  'document.querySelector("model-viewer").cameraTarget = ("-4.5m 1.6m 1m");');
+                    },
+                    icon: Icon(Icons.swipe_down),
+                  ),
+                  IconButton(
+                    onPressed: () {
+                      // Rotate Model 2 right
+                      _playAnimation(widget.controller1!, "idle",
+                          statement:
+                              'document.querySelector("model-viewer").cameraOrbit = "-90deg 90deg 1m";' +
+                                  'document.querySelector("model-viewer").cameraTarget = ("-4.5m 1.4m 0m");');
+                      // widget.controller1?.setCameraOrbit(10.0, 45.0, 2.0);
+                    },
+                    icon: Icon(Icons.swipe_right),
+                  ),
+                ],
               ),
             ],
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

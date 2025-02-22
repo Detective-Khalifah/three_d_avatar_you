@@ -39,67 +39,68 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Scaffold(
-          appBar: AppBar(
-            title: Text("3D Avatar You"),
+        appBar: AppBar(
+          title: Text("3D Avatar You"),
+        ),
+        body: SizedBox.fromSize(
+          size: Size(
+            MediaQuery.of(context).size.width,
+            MediaQuery.of(context).size.height,
           ),
-          body: SizedBox.fromSize(
-            size: Size(
-              MediaQuery.of(context).size.width,
-              MediaQuery.of(context).size.height,
-            ),
-            // width: MediaQuery.of(context).size.width,
-            // height: MediaQuery.of(context).size.height,
-            child: Column(
-              // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-              // action in the IDE, or press "p" in the console), to see the
-              // wireframe for each widget.
-              children: <Widget>[
-                // Model 1 (Left)
-                Expanded(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.max,
-                    // crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Expanded(
-                        child: ThreeDModelViewer(
-                          modelId: 0,
-                          onControllerCreated: (controller) {
-                            Future.microtask(() {
-                              setState(() {
-                                _controller0 = controller;
-                              });
+          // width: MediaQuery.of(context).size.width,
+          // height: MediaQuery.of(context).size.height,
+          child: Column(
+            // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
+            // action in the IDE, or press "p" in the console), to see the
+            // wireframe for each widget.
+            children: <Widget>[
+              // Model 1 (Left)
+              Flexible(
+                flex: 16,
+                child: Row(
+                  mainAxisSize: MainAxisSize.max,
+                  // crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: ThreeDModelViewer(
+                        modelId: 0,
+                        onControllerCreated: (controller) {
+                          Future.microtask(() {
+                            setState(() {
+                              _controller0 = controller;
                             });
-                          },
-                        ),
+                          });
+                        },
                       ),
-                      // Model 2 (Right)
-                      Expanded(
-                        child: ThreeDModelViewer(
-                          modelId: 1,
-                          onControllerCreated: (controller) {
-                            Future.microtask(() {
-                              setState(() {
-                                _controller1 = controller;
-                              });
+                    ),
+                    // Model 2 (Right)
+                    Expanded(
+                      child: ThreeDModelViewer(
+                        modelId: 1,
+                        onControllerCreated: (controller) {
+                          Future.microtask(() {
+                            setState(() {
+                              _controller1 = controller;
                             });
-                            // setState(() {
-                            //   _controller1 = controller;
-                            // });
-                          },
-                        ),
+                          });
+                          // setState(() {
+                          //   _controller1 = controller;
+                          // });
+                        },
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              Flexible(
+                flex: 2,
+                child: ControlFABs(
+                    controller0: _controller0, controller1: _controller1),
+              ),
+            ],
           ),
-          floatingActionButton:
-              // _controller0 != null && _controller1 != null ?
-              ControlFABs(controller0: _controller0, controller1: _controller1)
-          // : null,
-          // This trailing comma makes auto-formatting nicer for build methods.
-          ),
+        ), // This trailing comma makes auto-formatting nicer for build methods.
+      ),
     );
   }
 }
