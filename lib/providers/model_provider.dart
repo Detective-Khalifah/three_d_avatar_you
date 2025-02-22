@@ -19,17 +19,4 @@ class ModelNotifier extends StateNotifier<Model> {
   void loadModel(String path) {
     state = state.copyWith(modelPath: path);
   }
-
-  // Rotate model
-  void rotate(double delta) {
-    state = state.copyWith(rotationY: state.rotationY + delta);
-  }
-
-  // Trigger jump animation
-  void jump() {
-    state = state.copyWith(isJumping: true);
-    Future.delayed(Duration(seconds: 1), () {
-      state = state.copyWith(isJumping: false);
-    });
-  }
 }

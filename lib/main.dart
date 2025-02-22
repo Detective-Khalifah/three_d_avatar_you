@@ -1,9 +1,6 @@
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_3d_controller/flutter_3d_controller.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:three_d_avatar_you/models/three_d_obj_model.dart';
-import 'package:three_d_avatar_you/providers/model_provider.dart';
 import 'package:three_d_avatar_you/widgets/controls.dart';
 import 'package:three_d_avatar_you/widgets/model_viewer.dart';
 
@@ -35,8 +32,8 @@ class MyHomePage extends ConsumerStatefulWidget {
 }
 
 class _MyHomePageState extends ConsumerState<MyHomePage> {
-  Flutter3DController? _controller0;
-  Flutter3DController? _controller1;
+  WebViewController? _controller0;
+  WebViewController? _controller1;
 
   @override
   Widget build(BuildContext context) {
@@ -58,39 +55,41 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
               // wireframe for each widget.
               children: <Widget>[
                 // Model 1 (Left)
-                Row(
-                  mainAxisSize: MainAxisSize.max,
-                  // crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Expanded(
-                      child: ModelViewer(
-                        modelId: 0,
-                        onControllerCreated: (controller) {
-                          Future.microtask(() {
-                            setState(() {
-                              _controller0 = controller;
+                Expanded(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.max,
+                    // crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(
+                        child: ThreeDModelViewer(
+                          modelId: 0,
+                          onControllerCreated: (controller) {
+                            Future.microtask(() {
+                              setState(() {
+                                _controller0 = controller;
+                              });
                             });
-                          });
-                        },
+                          },
+                        ),
                       ),
-                    ),
-                    // Model 2 (Right)
-                    Expanded(
-                      child: ModelViewer(
-                        modelId: 1,
-                        onControllerCreated: (controller) {
-                          Future.microtask(() {
-                            setState(() {
-                              _controller1 = controller;
+                      // Model 2 (Right)
+                      Expanded(
+                        child: ThreeDModelViewer(
+                          modelId: 1,
+                          onControllerCreated: (controller) {
+                            Future.microtask(() {
+                              setState(() {
+                                _controller1 = controller;
+                              });
                             });
-                          });
-                          // setState(() {
-                          //   _controller1 = controller;
-                          // });
-                        },
+                            // setState(() {
+                            //   _controller1 = controller;
+                            // });
+                          },
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),
