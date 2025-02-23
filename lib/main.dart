@@ -94,7 +94,7 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
               ),
               Flexible(
                 flex: 2,
-                child: ControlFABs(
+                child: AnimationControl(
                     controller0: _controller0, controller1: _controller1),
               ),
             ],

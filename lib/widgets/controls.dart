@@ -4,21 +4,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:three_d_avatar_you/providers/model_provider.dart';
 
 /// Rotation/Jump Controls
-class ControlFABs extends ConsumerStatefulWidget {
+class AnimationControl extends ConsumerStatefulWidget {
   final WebViewController? controller0;
   final WebViewController? controller1;
 
-  const ControlFABs({
+  const AnimationControl({
     super.key,
     this.controller0,
     this.controller1,
   });
 
   @override
-  ConsumerState<ControlFABs> createState() => _ControlFABsState();
+  ConsumerState<AnimationControl> createState() => _ControlFABsState();
 }
 
-class _ControlFABsState extends ConsumerState<ControlFABs> {
+class _ControlFABsState extends ConsumerState<AnimationControl> {
   bool _isTalking = true; // Track which model is talking
   bool isRightFABExpanded = false,
       isLeftFABExpanded = false,
@@ -40,7 +40,7 @@ class _ControlFABsState extends ConsumerState<ControlFABs> {
       if (!isMixamoModel) controller.runJavaScript(statement);
     }
 
-    final repetitions = animation == "jump" ? 1 : "Infinity";
+    const repetitions = 1;
 
     // TODO: `setTimeout` not running in js below to reset model; use `Future.delayed(duration);` instead
     controller.runJavaScript('''
@@ -60,7 +60,7 @@ class _ControlFABsState extends ConsumerState<ControlFABs> {
       // Select the passed animation and play it
       modelViewer.animationName = "$theAnimation";
       modelViewer.play({repetitions: $repetitions});
-      console.log("Playing jump animation with '$repetitions' repetition.");
+      console.log("Playing '$theAnimation' animation with '$repetitions' repetition.");
       
       if (typeof duration === "undefined") {
         duration = modelViewer.duration;
@@ -82,21 +82,38 @@ class _ControlFABsState extends ConsumerState<ControlFABs> {
       // }, duration);
     ''');
 
+    // Reset model animation for retargeted & Mixamoed models.
     Future.delayed(
       Duration(milliseconds: duration),
       () {
-        // Reset model animation
-        controller.runJavaScript('''
-          if (typeof modelViewer === "undefined") {
-            modelViewer = document.querySelector("model-viewer");
-          }
-          console.log("Resetting/Stopping animation");
-          modelViewer.pause();
-          modelViewer.currentTime = 0;
+        if (animation == "jump") {
+          controller.runJavaScript('''
+            if (typeof modelViewer === "undefined") {
+              modelViewer = document.querySelector("model-viewer");
+            }
+            console.log("Resetting/Stopping animation");
+            // modelViewer.animationName = "$parseAnimationStatement(animation: "stand", controller: $controller)";
+            modelViewer.pause();
+            modelViewer.currentTime = 0;
+            console.log("animation reset");
         ''');
+        } else {
+          // play idle -- let model rest
+          controller.runJavaScript('''
+            if (typeof modelViewer === "undefined") {
+              modelViewer = document.querySelector("model-viewer");
+            }
+            console.log("idling");
+            modelViewer.currentTime = duration;
+            modelViewer.pause();
+            console.log("idle");
+          ''');
+        }
       },
     ).then(
       (value) {
+        // End of retargeted animation rest algorithm and continuation of Mixamoed rest;
+        // (if in crouch postion, stand up)
         if (animation == "crouch") {
           controller.runJavaScript('''
         if (typeof modelViewer === "undefined") {
@@ -110,16 +127,19 @@ class _ControlFABsState extends ConsumerState<ControlFABs> {
               Future.delayed(
                 Duration(milliseconds: 2590),
                 () {
-                  // todo: play idle
-                  // without this statement, player keeps standing up.
-                  // todo: consider using `flutter_3d_controller` as it may have easier controls
                   controller.runJavaScript('''
-          if (typeof modelViewer === "undefined") {
-            modelViewer = document.querySelector("model-viewer");
-          }
-          modelViewer.pause();
-          modelViewer.currentTime = 0;
-        ''');
+                    if (typeof modelViewer === "undefined") {
+                      modelViewer = document.querySelector("model-viewer");
+                    }
+                    console.log("stood up");
+                    modelViewer.currentTime = 2590;
+                    modelViewer.pause();
+                    // Added this to prevent model from getting to crouch
+                    // position when next animation is played, which looks...
+                    // very jarring!
+                    modelViewer.animationName = "crouch"; 
+                    console.log("nothing further");
+                  ''');
                 },
               );
             },
@@ -128,6 +148,8 @@ class _ControlFABsState extends ConsumerState<ControlFABs> {
       },
     );
   }
+  // TODO: consider using `flutter_3d_controller` as it may have easier controls
+  //  or use a better, approriate, suitable framework/tool
 
   String parseAnimationStatement({
     required String animation,
