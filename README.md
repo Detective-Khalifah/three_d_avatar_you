@@ -23,8 +23,8 @@ A Flutter app demonstrating 3D asset loading, animation, and user interaction us
    ```
 
 ## Links
-- [Appetize demo]()
-- [Video demo]()
+- [Appetize demo](https://appetize.io/app/b_4kmttvmizfremy7szxu44bathi)
+- [Video walkthrough](https://drive.google.com/drive/folders/1AR6w50GUVyDcAtuxAc0lTGGaOHLoiRm7?usp=sharing)
 
 ---
 

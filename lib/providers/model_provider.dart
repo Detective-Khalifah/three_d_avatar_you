@@ -6,6 +6,8 @@ final modelProvider = StateNotifierProvider.autoDispose
     .family<ModelNotifier, Model, int>((ref, modelId) {
   // Define initial model paths based on modelId
   final initialModelPath = modelId == 0
+      // ? "assets/models/first_model_mixamoed.glb"
+      // : "assets/models/second_model_mixamoed.glb";
       ? "assets/models/first_model_retargeted.glb"
       : "assets/models/second_model_retargeted.glb";
   return ModelNotifier(initialModelPath: initialModelPath);

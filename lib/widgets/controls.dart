@@ -23,6 +23,7 @@ class _ControlFABsState extends ConsumerState<ControlFABs> {
   bool isRightFABExpanded = false,
       isLeftFABExpanded = false,
       isMixamoModel = false;
+  int duration = 1000;
 
   // Injects JavaScript to start animations
   /// Model stops previous animation, becomes idle or talks if they're facing the other model.
@@ -41,11 +42,12 @@ class _ControlFABsState extends ConsumerState<ControlFABs> {
 
     final repetitions = animation == "jump" ? 1 : "Infinity";
 
+    // TODO: `setTimeout` not running in js below to reset model; use `Future.delayed(duration);` instead
     controller.runJavaScript('''
       // Ensure modelViewer is defined
       if (typeof modelViewer === "undefined") {
         modelViewer = document.querySelector("model-viewer");
-    }
+      }
 
       console.log(modelViewer.getCameraTarget().toString());
       console.log(modelViewer.getCameraOrbit().toString());
@@ -61,24 +63,70 @@ class _ControlFABsState extends ConsumerState<ControlFABs> {
       console.log("Playing jump animation with '$repetitions' repetition.");
       
       if (typeof duration === "undefined") {
-        let duration = modelViewer.duration;
+        duration = modelViewer.duration;
         console.log("Animation duration: ", duration);
       }
 
-      setTimeout(() => {
-        if ("$theAnimation" !== "crouch") {
-        console.log("not crouch);
+      // setTimeout(() => {
+      //   if ("$theAnimation" !== "crouch") {
+      //   console.log("not crouch);
+      //     modelViewer.pause();
+      //     modelViewer.currentTime = 0;
+      //   } else {
+      //     console.log("crouch");
+      //     modelViewer.pause();
+      //     // modelViewer.play("stand_up"); also an infinite animation. TODO: see if I can make model stand up before jumping
+      //   }
+      //   // modelViewer.cameraTarget = "auto"; // Re-center camera
+      //   // modelViewer.cameraOrbit = "auto";  // Ensure camera follows
+      // }, duration);
+    ''');
+
+    Future.delayed(
+      Duration(milliseconds: duration),
+      () {
+        // Reset model animation
+        controller.runJavaScript('''
+          if (typeof modelViewer === "undefined") {
+            modelViewer = document.querySelector("model-viewer");
+          }
+          console.log("Resetting/Stopping animation");
           modelViewer.pause();
           modelViewer.currentTime = 0;
-        } else {
-        console.log("crouch");
-          modelViewer.pause();
-          modelViewer.play("stand_up");
+        ''');
+      },
+    ).then(
+      (value) {
+        if (animation == "crouch") {
+          controller.runJavaScript('''
+        if (typeof modelViewer === "undefined") {
+          modelViewer = document.querySelector("model-viewer");
         }
-        // modelViewer.cameraTarget = "auto"; // Re-center camera
-        // modelViewer.cameraOrbit = "auto";  // Ensure camera follows
-      }, duration);
-    ''');
+        console.log("standing up");
+        modelViewer.animationName = "stand_up";
+        modelViewer.play();
+      ''').then(
+            (value) {
+              Future.delayed(
+                Duration(milliseconds: 2590),
+                () {
+                  // todo: play idle
+                  // without this statement, player keeps standing up.
+                  // todo: consider using `flutter_3d_controller` as it may have easier controls
+                  controller.runJavaScript('''
+          if (typeof modelViewer === "undefined") {
+            modelViewer = document.querySelector("model-viewer");
+          }
+          modelViewer.pause();
+          modelViewer.currentTime = 0;
+        ''');
+                },
+              );
+            },
+          );
+        }
+      },
+    );
   }
 
   String parseAnimationStatement({
@@ -90,15 +138,23 @@ class _ControlFABsState extends ConsumerState<ControlFABs> {
     if (isMixamoModel) {
       theAnimation = switch (animation) {
         "crouch" => "crouch",
-        "idle" =>
-          (controller == widget.controller0) ? "turn_right" : "turn_left",
-        // (controller == widget.controller0) ? "turn_left" : "turn_right",
+        "idle" => (controller == widget.controller0)
+            ? "right_turn" // TODO: fix animation name for model in glasses
+            : "turn_left",
         "jump" => "jump_up",
         "stand" => "stand_up",
-        "talk" =>
-          (controller == widget.controller0) ? "turn_left" : "turn_right",
-        // (controller == widget.controller0) ? "turn_right" : "turn_left",
+        "talk" => (controller == widget.controller0)
+            ? "left_turn" // TODO: fix animation name for model in glasses
+            : "turn_right",
         _ => "jump_up"
+      };
+      duration = switch (animation) {
+        "crouch" => 4090,
+        "idle" => 960,
+        "jump" => 2400,
+        "stand" => 2590,
+        "talk" => 960,
+        _ => 1000
       };
     } else {
       theAnimation = switch (animation) {
@@ -109,6 +165,12 @@ class _ControlFABsState extends ConsumerState<ControlFABs> {
         "talk" =>
           (controller == widget.controller0) ? "Talking_010" : "Talking_001",
         _ => "Standing_Idle_003"
+      };
+      duration = switch (animation) {
+        "idle" => 6090,
+        "jump" => 1930,
+        "talk" => 10000,
+        _ => 1000
       };
     }
     return theAnimation;
@@ -240,8 +302,8 @@ class _ControlFABsState extends ConsumerState<ControlFABs> {
                 model1State
                     .loadModel("assets/models/second_model_retargeted.glb");
               } else {
-                model1State.loadModel("assets/models/first_model_mixamoed.glb");
-                model0State
+                model0State.loadModel("assets/models/first_model_mixamoed.glb");
+                model1State
                     .loadModel("assets/models/second_model_mixamoed.glb");
               }
               setState(() {
