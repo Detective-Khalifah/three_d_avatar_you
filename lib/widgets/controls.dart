@@ -19,7 +19,6 @@ class AnimationControl extends ConsumerStatefulWidget {
 }
 
 class _ControlFABsState extends ConsumerState<AnimationControl> {
-  bool _isTalking = true; // Track which model is talking
   bool isRightFABExpanded = false,
       isLeftFABExpanded = false,
       isMixamoModel = false;
@@ -27,7 +26,6 @@ class _ControlFABsState extends ConsumerState<AnimationControl> {
 
   // Injects JavaScript to start animations
   /// Model stops previous animation, becomes idle or talks if they're facing the other model.
-  /// animations:  Standing_Idle_003, Walk_Jump_002, Talking_001, and Talking_010
   void _playAnimation(WebViewController controller, String animation,
       {String? statement}) {
     if (widget.controller0 == null || widget.controller1 == null) return;
@@ -66,20 +64,6 @@ class _ControlFABsState extends ConsumerState<AnimationControl> {
         duration = modelViewer.duration;
         console.log("Animation duration: ", duration);
       }
-
-      // setTimeout(() => {
-      //   if ("$theAnimation" !== "crouch") {
-      //   console.log("not crouch);
-      //     modelViewer.pause();
-      //     modelViewer.currentTime = 0;
-      //   } else {
-      //     console.log("crouch");
-      //     modelViewer.pause();
-      //     // modelViewer.play("stand_up"); also an infinite animation. TODO: see if I can make model stand up before jumping
-      //   }
-      //   // modelViewer.cameraTarget = "auto"; // Re-center camera
-      //   // modelViewer.cameraOrbit = "auto";  // Ensure camera follows
-      // }, duration);
     ''');
 
     // Reset model animation for retargeted & Mixamoed models.
@@ -149,8 +133,11 @@ class _ControlFABsState extends ConsumerState<AnimationControl> {
     );
   }
   // TODO: consider using `flutter_3d_controller` as it may have easier controls
-  //  or use a better, approriate, suitable framework/tool
+  //  or use a better, approriate, suitable framework/tool; otherwise, an "idle"
+  //  animation's got to be played all the time.
 
+  /// Determine what animation to play
+  /// Retargeted animations: Standing_Idle_003, Walk_Jump_002, Talking_001, and Talking_010
   String parseAnimationStatement({
     required String animation,
     required WebViewController controller,
@@ -160,14 +147,12 @@ class _ControlFABsState extends ConsumerState<AnimationControl> {
     if (isMixamoModel) {
       theAnimation = switch (animation) {
         "crouch" => "crouch",
-        "idle" => (controller == widget.controller0)
-            ? "right_turn" // TODO: fix animation name for model in glasses
-            : "turn_left",
+        "idle" =>
+          (controller == widget.controller0) ? "turn_right" : "turn_left",
         "jump" => "jump_up",
         "stand" => "stand_up",
-        "talk" => (controller == widget.controller0)
-            ? "left_turn" // TODO: fix animation name for model in glasses
-            : "turn_right",
+        "talk" =>
+          (controller == widget.controller0) ? "turn_left" : "turn_right",
         _ => "jump_up"
       };
       duration = switch (animation) {
@@ -198,34 +183,55 @@ class _ControlFABsState extends ConsumerState<AnimationControl> {
     return theAnimation;
   }
 
-  /// Switches animation & resumes talking after interaction
-  /// animations:  Standing_Idle_003, Walk_Jump_002, Talking_001/Talking_010
-  void _initializeAnimation(String action) {
-    final actingController =
-        _isTalking ? widget.controller0 : widget.controller1;
-    final idleController = _isTalking ? widget.controller1 : widget.controller0;
+  /// Start talking animation
+  void _initializeAnimation() {
+    debugPrint("_initializeAnim");
+    if (widget.controller0 == null || widget.controller1 == null)
+      return;
+    else {
+      // if (statement != null && statement.isNotEmpty) {
+      //   if (!isMixamoModel) controller.runJavaScript(statement);
+      // }
+      // Pause talking animation & play action
+      debugPrint("_initializeAnim A-OK");
+      _playAnimation(widget.controller0!, "talk",
+          statement:
+              'document.querySelector("model-viewer").cameraOrbit = "-90deg 120deg 1.5m";' +
+                  'document.querySelector("model-viewer").cameraTarget = ("-3m -1m 0m");');
+      _playAnimation(widget.controller1!, "talk",
+          statement:
+              'document.querySelector("model-viewer").cameraOrbit = ("90deg 90deg 3m");' +
+                  'document.querySelector("model-viewer").cameraTarget = ("4m 1.5m 0m");');
+    }
+    // widget.controller0?.runJavaScript('''
+    //   if (typeof modelViewer === "undefined") {
+    //     modelViewer = document.querySelector("model-viewer");
+    //   }
+    //   const modelViewer = document.querySelector('model-viewer');
+    //   modelViewer.animationName = "$theAnimation";
+    //   setTimeout(() => {
+    //     modelViewer.cameraTarget = "auto"; // Re-center camera
+    //   }, 500);
+    // ''');
+    // widget.controller1?.runJavaScript('''javaScript''');
 
-    // Pause talking animation & play action
-    actingController?.runJavaScript(
-        '''const modelViewer = document.querySelector('model-viewer');
-           modelViewer.animationName = "$action";
-           setTimeout(() => {
-             modelViewer.cameraTarget = "auto"; // Re-center camera
-           }, 500);
-        ''');
+    // Future.delayed(Duration(seconds: 2), () {
+    //   // Resume talking after action completes
+    //   controller.runJavaScript(
+    //       'document.querySelector("model-viewer").animationName = "Talking_001";');
+    //   controller.runJavaScript(
+    //       'document.querySelector("model-viewer").animationName = " Standing_Idle_003";');
+    // });
+  }
 
-    Future.delayed(Duration(seconds: 2), () {
-      // Resume talking after action completes
-      actingController?.runJavaScript(
-          'document.querySelector("model-viewer").animationName = "Talking_001";');
-      idleController?.runJavaScript(
-          'document.querySelector("model-viewer").animationName = " Standing_Idle_003";');
-
-      // Swap turns
-      setState(() {
-        _isTalking = !_isTalking;
-      });
-    });
+  @override
+  void initState() {
+    // TODO: Add more time or use a better approach to account for devices with low memory, which would load slowly.
+    Future.delayed(
+      Duration(seconds: 10),
+      () => _initializeAnimation(),
+    );
+    super.initState();
   }
 
   @override
@@ -330,10 +336,14 @@ class _ControlFABsState extends ConsumerState<AnimationControl> {
               }
               setState(() {
                 isMixamoModel = !isMixamoModel;
+                Future.delayed(
+                  Duration(seconds: 10),
+                  () => _initializeAnimation(),
+                );
               });
               debugPrint("Switched. Is Mixamo? $isMixamoModel");
             },
-            label: Text("Switch model"),
+            label: Text("Switch models"),
           ),
           Column(
             mainAxisSize: MainAxisSize.min,
