@@ -29,9 +29,9 @@ A Flutter app demonstrating 3D asset loading, animation, and user interaction us
 ---
 
 ### **Final Checklist**
-- [ ] Two 3D assets loaded and facing each other.
-- [ ] Smooth animations for rotation and jump.
+- [x] Two 3D assets loaded and facing each other.
+- [x] Smooth animations for rotation and jump.
 - [ ] Optimized rendering performance.
-- [ ] Documentation and submission links ready.
+- [x] Documentation and submission links ready.
 
 ---
